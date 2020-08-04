@@ -3,6 +3,7 @@
 #define __LINUX_UACCESS_H__
 
 #include <linux/instrumented.h>
+#include <linux/partial_usercopy.h>
 #include <linux/sched.h>
 #include <linux/thread_info.h>
 
@@ -58,18 +59,22 @@
 static __always_inline __must_check unsigned long
 __copy_from_user_inatomic(void *to, const void __user *from, unsigned long n)
 {
+	unsigned long not_copied = should_partial_copy_from_user(n);
+	n = n - not_copied;
 	instrument_copy_from_user(to, from, n);
 	check_object_size(to, n, false);
-	return raw_copy_from_user(to, from, n);
+	return not_copied + raw_copy_from_user(to, from, n);
 }
 
 static __always_inline __must_check unsigned long
 __copy_from_user(void *to, const void __user *from, unsigned long n)
 {
+	unsigned long not_copied = should_partial_copy_from_user(n);
+	n = n - not_copied;
 	might_fault();
 	instrument_copy_from_user(to, from, n);
 	check_object_size(to, n, false);
-	return raw_copy_from_user(to, from, n);
+	return not_copied + raw_copy_from_user(to, from, n);
 }
 
 /**
@@ -107,14 +112,19 @@ static inline __must_check unsigned long
 _copy_from_user(void *to, const void __user *from, unsigned long n)
 {
 	unsigned long res = n;
+	unsigned long not_copied = should_partial_copy_from_user(n);
+	if (unlikely(not_copied)) {
+		n = n - not_copied;
+		res = n;
+	}
 	might_fault();
-	if (likely(access_ok(from, n))) {
+	if (likely(access_ok(from, n + not_copied))) {
 		instrument_copy_from_user(to, from, n);
 		res = raw_copy_from_user(to, from, n);
 	}
 	if (unlikely(res))
 		memset(to + (n - res), 0, res);
-	return res;
+	return res + not_copied;
 }
 #else
 extern __must_check unsigned long
@@ -140,9 +150,11 @@ _copy_to_user(void __user *, const void *, unsigned long);
 static __always_inline unsigned long __must_check
 copy_from_user(void *to, const void __user *from, unsigned long n)
 {
-	if (likely(check_copy_size(to, n, false)))
+	unsigned long not_copied = should_partial_copy_from_user(n);
+	n = n - not_copied;
+	if (likely(check_copy_size(to, n + not_copied, false)))
 		n = _copy_from_user(to, from, n);
-	return n;
+	return not_copied + n;
 }
 
 static __always_inline unsigned long __must_check

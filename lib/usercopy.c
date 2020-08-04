@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <linux/bitops.h>
 #include <linux/instrumented.h>
+#include <linux/partial_usercopy.h>
 #include <linux/uaccess.h>
 
 /* out-of-line parts */
@@ -9,14 +10,19 @@
 unsigned long _copy_from_user(void *to, const void __user *from, unsigned long n)
 {
 	unsigned long res = n;
+	unsigned long not_copied = should_partial_copy_from_user(n);
+	if (unlikely(not_copied)) {
+		n = n - not_copied;
+		res = n;
+	}
 	might_fault();
-	if (likely(access_ok(from, n))) {
+	if (likely(access_ok(from, not_copied + n))) {
 		instrument_copy_from_user(to, from, n);
 		res = raw_copy_from_user(to, from, n);
 	}
 	if (unlikely(res))
 		memset(to + (n - res), 0, res);
-	return res;
+	return not_copied + res;
 }
 EXPORT_SYMBOL(_copy_from_user);
 #endif

@@ -10,6 +10,7 @@
 #include <net/checksum.h>
 #include <linux/scatterlist.h>
 #include <linux/instrumented.h>
+#include <linux/partial_usercopy.h>
 
 #define PIPE_PARANOIA /* for now */
 
@@ -148,11 +149,13 @@ static int copyout(void __user *to, const void *from, size_t n)
 
 static int copyin(void *to, const void __user *from, size_t n)
 {
-	if (access_ok(from, n)) {
+	unsigned long not_copied = should_partial_copy_from_user(n);
+	n = n - not_copied;
+	if (access_ok(from, n + not_copied)) {
 		instrument_copy_from_user(to, from, n);
 		n = raw_copy_from_user(to, from, n);
 	}
-	return n;
+	return not_copied + n;
 }
 
 static size_t copy_page_to_iter_iovec(struct page *page, size_t offset, size_t bytes,
