@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <linux/export.h>
 #include <linux/bvec.h>
+#include <linux/fail-usercopy.h>
 #include <linux/uio.h>
 #include <linux/pagemap.h>
 #include <linux/slab.h>
@@ -138,18 +139,26 @@
 
 static int copyout(void __user *to, const void *from, size_t n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		return not_copied;
 	if (access_ok(to, n)) {
 		instrument_copy_to_user(to, from, n);
-		n = raw_copy_to_user(to, from, n);
+		n = not_copied + raw_copy_to_user(to, from, n - not_copied);
 	}
 	return n;
 }
 
 static int copyin(void *to, const void __user *from, size_t n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		return not_copied;
 	if (access_ok(from, n)) {
 		instrument_copy_from_user(to, from, n);
-		n = raw_copy_from_user(to, from, n);
+		n = not_copied + raw_copy_from_user(to, from, n - not_copied);
 	}
 	return n;
 }
@@ -639,9 +648,14 @@ EXPORT_SYMBOL(_copy_to_iter);
 #ifdef CONFIG_ARCH_HAS_UACCESS_MCSAFE
 static int copyout_mcsafe(void __user *to, const void *from, size_t n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		return not_copied;
 	if (access_ok(to, n)) {
 		instrument_copy_to_user(to, from, n);
-		n = copy_to_user_mcsafe((__force void *) to, from, n);
+		n = not_copied + copy_to_user_mcsafe((__force void *) to,
+			       from, n - not_copied);
 	}
 	return n;
 }
