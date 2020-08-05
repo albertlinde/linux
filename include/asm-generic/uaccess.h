@@ -7,6 +7,7 @@
  * on any machine that has kernel and user data in the same
  * address space, e.g. all NOMMU machines.
  */
+#include <linux/fail-usercopy.h>
 #include <linux/instrumented.h>
 #include <linux/string.h>
 
@@ -144,6 +145,8 @@ static inline int __access_ok(unsigned long addr, unsigned long size)
 static inline int __put_user_fn(size_t size, void __user *ptr, void *x)
 {
 	intrument_write(ptr, size);
+	if (should_fail_usercopy(size))
+		return -EFAULT;
 	return unlikely(raw_copy_to_user(ptr, x, size)) ? -EFAULT : 0;
 }
 
@@ -206,6 +209,8 @@ extern int __put_user_bad(void) __attribute__((noreturn));
 static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)
 {
 	instrument_read(ptr, size);
+	if (should_fail_usercopy(size))
+		return -EFAULT;
 	return unlikely(raw_copy_from_user(x, ptr, size)) ? -EFAULT : 0;
 }
 
@@ -236,6 +241,8 @@ strncpy_from_user(char *dst, const char __user *src, long count)
 	if (!access_ok(src, 1))
 		return -EFAULT;
 	instrument_read(src, count);
+	if (should_fail_usercopy(count))
+		return -EFAULT;
 	return __strncpy_from_user(dst, src, count);
 }
 
@@ -275,11 +282,15 @@ __clear_user(void __user *to, unsigned long n)
 static inline __must_check unsigned long
 clear_user(void __user *to, unsigned long n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		not_copied = n;
 	might_fault();
 	if (!access_ok(to, n))
 		return n;
 	intrument_write(to, n);
-	return __clear_user(to, n);
+	return not_copied + __clear_user(to, n - not_copied);
 }
 
 #include <asm/extable.h>
