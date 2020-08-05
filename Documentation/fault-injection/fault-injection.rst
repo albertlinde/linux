@@ -16,6 +16,10 @@ Available fault injection capabilities
 
   injects page allocation failures. (alloc_pages(), get_free_pages(), ...)
 
+- fail_usercopy
+
+  injects failures in user memory access functions. (copy_from_user(), get_user(), ...)
+
 - fail_futex
 
   injects futex deadlock and uaddr fault errors.
@@ -138,6 +142,12 @@ configuration of fault-injection capabilities.
 	specifies the minimum page allocation order to be injected
 	failures.
 
+- /sys/kernel/debug/fail_usercopy/failsize:
+
+	specifies the error code to return or amount of bytes not to copy.
+	If set to 0 then -EFAULT is returned instead. Positive values can be
+	used to inject partial copies (copy_from_user(), ...)
+
 - /sys/kernel/debug/fail_futex/ignore-private:
 
 	Format: { 'Y' | 'N' }
@@ -177,6 +187,7 @@ use the boot option::
 
 	failslab=
 	fail_page_alloc=
+	fail_usercopy=
 	fail_make_request=
 	fail_futex=
 	mmc_core.fail_request=<interval>,<probability>,<space>,<times>
@@ -382,6 +393,55 @@ allocation failure::
 	# env FAILCMD_TYPE=fail_page_alloc \
 		./tools/testing/fault-injection/failcmd.sh --times=100 \
 		-- make -C tools/testing/selftests/ run_tests
+
+
+Fail usercopy functions
+---------------------------------
+
+The following code fails the usercopy call in sendfile: get_user on offset.
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
+
+void inject_size()
+{
+	int fd = open("/sys/kernel/debug/fail_usercopy/failsize", O_RDWR);
+	char buf[16];
+	sprintf(buf, "%d", 60);
+	write(fd, buf, strlen(buf));
+}
+
+void inject_fault()
+{
+	int fd = open("/proc/thread-self/fail-nth", O_RDWR);
+	char buf[16];
+	sprintf(buf, "%d", 4);
+	write(fd, buf, strlen(buf));
+}
+
+int main()
+{
+	struct stat sb;
+	inject_size();
+	inject_fault();
+	stat(".", &sb);
+	printf("Last status change:       %s", ctime(&sb.st_ctime));
+	printf("Last file access:         %s", ctime(&sb.st_atime));
+	printf("Last file modification:   %s", ctime(&sb.st_mtime));
+	return 0;
+}
+
+Example output:
+Last status change:       Thu Jan  1 00:00:00 1970
+Last file access:         Tue Aug 18 14:09:34 2020
+Last file modification:   Sun Dec 12 00:19:57 2989041
 
 Systematic faults using fail-nth
 ---------------------------------
