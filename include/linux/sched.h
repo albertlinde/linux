@@ -1172,6 +1172,10 @@ struct task_struct {
 	int				make_it_fail;
 	unsigned int			fail_nth;
 #endif
+
+#ifdef CONFIG_FAULT_INJECTION_USERCOPY
+	unsigned int			fail_usercopy_size;
+#endif
 	/*
 	 * When (nr_dirtied >= nr_dirtied_pause), it's time to call
 	 * balance_dirty_pages() for a dirty throttling pause:

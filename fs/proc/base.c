@@ -1424,6 +1424,47 @@ static const struct file_operations proc_fail_nth_operations = {
 };
 #endif
 
+#ifdef CONFIG_FAULT_INJECTION_USERCOPY
+static ssize_t proc_fail_usercopy_size_write(struct file *file, const char __user *buf,
+				   size_t count, loff_t *ppos)
+{
+	struct task_struct *task;
+	int err;
+	unsigned int n;
+
+	err = kstrtouint_from_user(buf, count, 0, &n);
+	if (err)
+		return err;
+
+	task = get_proc_task(file_inode(file));
+	if (!task)
+		return -ESRCH;
+	task->fail_usercopy_size = n;
+	put_task_struct(task);
+
+	return count;
+}
+
+static ssize_t proc_fail_usercopy_size_read(struct file *file, char __user *buf,
+				  size_t count, loff_t *ppos)
+{
+	struct task_struct *task;
+	char numbuf[PROC_NUMBUF];
+	ssize_t len;
+
+	task = get_proc_task(file_inode(file));
+	if (!task)
+		return -ESRCH;
+	len = snprintf(numbuf, sizeof(numbuf), "%u\n", task->fail_usercopy_size);
+	put_task_struct(task);
+	return simple_read_from_buffer(buf, count, ppos, numbuf, len);
+}
+
+static const struct file_operations proc_fail_usercopy_size_operations = {
+	.read		= proc_fail_usercopy_size_read,
+	.write		= proc_fail_usercopy_size_write,
+};
+#endif
 
 #ifdef CONFIG_SCHED_DEBUG
 /*
@@ -3233,6 +3274,9 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("make-it-fail", S_IRUGO|S_IWUSR, proc_fault_inject_operations),
 	REG("fail-nth", 0644, proc_fail_nth_operations),
 #endif
+#ifdef CONFIG_FAULT_INJECTION_USERCOPY
+	REG("fail_usercopy_size", 0644, proc_fail_usercopy_size_operations),
+#endif
 #ifdef CONFIG_ELF_CORE
 	REG("coredump_filter", S_IRUGO|S_IWUSR, proc_coredump_filter_operations),
 #endif
@@ -3571,6 +3615,9 @@ static const struct pid_entry tid_base_stuff[] = {
 #ifdef CONFIG_FAULT_INJECTION
 	REG("make-it-fail", S_IRUGO|S_IWUSR, proc_fault_inject_operations),
 	REG("fail-nth", 0644, proc_fail_nth_operations),
+#endif
+#ifdef CONFIG_FAULT_INJECTION_USERCOPY
+	REG("fail_usercopy_size", 0644, proc_fail_usercopy_size_operations),
 #endif
 #ifdef CONFIG_TASK_IO_ACCOUNTING
 	ONE("io",	S_IRUSR, proc_tid_io_accounting),

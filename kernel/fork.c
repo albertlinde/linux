@@ -933,6 +933,10 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	tsk->fail_nth = 0;
 #endif
 
+#ifdef CONFIG_FAULT_INJECTION_USERCOPY
+	tsk->fail_usercopy_size = 0;
+#endif
+
 #ifdef CONFIG_BLK_CGROUP
 	tsk->throttle_queue = NULL;
 	tsk->use_memdelay = 0;
