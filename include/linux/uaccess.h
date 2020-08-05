@@ -2,6 +2,7 @@
 #ifndef __LINUX_UACCESS_H__
 #define __LINUX_UACCESS_H__
 
+#include <linux/fault-inject-usercopy.h>
 #include <linux/instrumented.h>
 #include <linux/sched.h>
 #include <linux/thread_info.h>
@@ -82,10 +83,14 @@ __copy_from_user_inatomic(void *to, const void __user *from, unsigned long n)
 static __always_inline __must_check unsigned long
 __copy_from_user(void *to, const void __user *from, unsigned long n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		return n;
 	might_fault();
 	instrument_copy_from_user(to, from, n);
 	check_object_size(to, n, false);
-	return raw_copy_from_user(to, from, n);
+	return not_copied + raw_copy_from_user(to, from, n - not_copied);
 }
 
 /**
@@ -104,18 +109,26 @@ __copy_from_user(void *to, const void __user *from, unsigned long n)
 static __always_inline __must_check unsigned long
 __copy_to_user_inatomic(void __user *to, const void *from, unsigned long n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		return n;
 	instrument_copy_to_user(to, from, n);
 	check_object_size(from, n, true);
-	return raw_copy_to_user(to, from, n);
+	return not_copied + raw_copy_to_user(to, from, n - not_copied);
 }
 
 static __always_inline __must_check unsigned long
 __copy_to_user(void __user *to, const void *from, unsigned long n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		return n;
 	might_fault();
 	instrument_copy_to_user(to, from, n);
 	check_object_size(from, n, true);
-	return raw_copy_to_user(to, from, n);
+	return not_copied + raw_copy_to_user(to, from, n - not_copied);
 }
 
 #ifdef INLINE_COPY_FROM_USER
@@ -123,10 +136,14 @@ static inline __must_check unsigned long
 _copy_from_user(void *to, const void __user *from, unsigned long n)
 {
 	unsigned long res = n;
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		not_copied = n;
 	might_fault();
 	if (likely(access_ok(from, n))) {
 		instrument_copy_from_user(to, from, n);
-		res = raw_copy_from_user(to, from, n);
+		res = not_copied + raw_copy_from_user(to, from, n - not_copied);
 	}
 	if (unlikely(res))
 		memset(to + (n - res), 0, res);
@@ -141,10 +158,14 @@ _copy_from_user(void *, const void __user *, unsigned long);
 static inline __must_check unsigned long
 _copy_to_user(void __user *to, const void *from, unsigned long n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		return n;
 	might_fault();
 	if (access_ok(to, n)) {
 		instrument_copy_to_user(to, from, n);
-		n = raw_copy_to_user(to, from, n);
+		n = not_copied + raw_copy_to_user(to, from, n - not_copied);
 	}
 	return n;
 }
