@@ -7,6 +7,7 @@
  * on any machine that has kernel and user data in the same
  * address space, e.g. all NOMMU machines.
  */
+#include <linux/instrumented.h>
 #include <linux/string.h>
 
 #ifdef CONFIG_UACCESS_MEMCPY
@@ -142,6 +143,7 @@ static inline int __access_ok(unsigned long addr, unsigned long size)
 
 static inline int __put_user_fn(size_t size, void __user *ptr, void *x)
 {
+	intrument_write(ptr, size);
 	return unlikely(raw_copy_to_user(ptr, x, size)) ? -EFAULT : 0;
 }
 
@@ -203,6 +205,7 @@ extern int __put_user_bad(void) __attribute__((noreturn));
 #ifndef __get_user_fn
 static inline int __get_user_fn(size_t size, const void __user *ptr, void *x)
 {
+	instrument_read(ptr, size);
 	return unlikely(raw_copy_from_user(x, ptr, size)) ? -EFAULT : 0;
 }
 
@@ -232,6 +235,7 @@ strncpy_from_user(char *dst, const char __user *src, long count)
 {
 	if (!access_ok(src, 1))
 		return -EFAULT;
+	instrument_read(src, count);
 	return __strncpy_from_user(dst, src, count);
 }
 
@@ -274,7 +278,7 @@ clear_user(void __user *to, unsigned long n)
 	might_fault();
 	if (!access_ok(to, n))
 		return n;
-
+	intrument_write(to, n);
 	return __clear_user(to, n);
 }
 
