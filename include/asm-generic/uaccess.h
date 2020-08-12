@@ -144,7 +144,7 @@ static inline int __access_ok(unsigned long addr, unsigned long size)
 
 static inline int __put_user_fn(size_t size, void __user *ptr, void *x)
 {
-	intrument_write(ptr, size);
+	instrument_write(ptr, size);
 	if (should_fail_usercopy(size))
 		return -EFAULT;
 	return unlikely(raw_copy_to_user(ptr, x, size)) ? -EFAULT : 0;
@@ -289,7 +289,7 @@ clear_user(void __user *to, unsigned long n)
 	might_fault();
 	if (!access_ok(to, n))
 		return n;
-	intrument_write(to, n);
+	instrument_write(to, n);
 	return not_copied + __clear_user(to, n - not_copied);
 }
 
