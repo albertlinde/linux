@@ -5,6 +5,8 @@
  * User space memory access functions
  */
 #include <linux/compiler.h>
+#include <linux/fail-usercopy.h>
+#include <linux/instrumented.h>
 #include <linux/kasan-checks.h>
 #include <linux/string.h>
 #include <asm/asm.h>
@@ -174,12 +176,14 @@ extern int __get_user_bad(void);
 	int __ret_gu;							\
 	register __inttype(*(ptr)) __val_gu asm("%"_ASM_DX);		\
 	__chk_user_ptr(ptr);						\
+	if (should_fail_usercopy(sizeof(*(ptr)))) {(x)=0; __ret_gu= -EFAULT;} else { \
+	/*instrument_read(ptr, sizeof(*(ptr)));	wont run kernel*/				\
 	might_fault();							\
 	asm volatile("call __get_user_%P4"				\
 		     : "=a" (__ret_gu), "=r" (__val_gu),		\
 			ASM_CALL_CONSTRAINT				\
 		     : "0" (ptr), "i" (sizeof(*(ptr))));		\
-	(x) = (__force __typeof__(*(ptr))) __val_gu;			\
+	(x) = (__force __typeof__(*(ptr))) __val_gu;	}		\
 	__builtin_expect(__ret_gu, 0);					\
 })
 
@@ -242,6 +246,8 @@ extern void __put_user_8(void);
 	__typeof__(*(ptr)) __pu_val;				\
 	__chk_user_ptr(ptr);					\
 	might_fault();						\
+	/*instrument_write(ptr, sizeof(*(ptr))); Wont run kernel.*/						\
+	if (should_fail_usercopy(sizeof(*(ptr)))) {__ret_pu= -EFAULT;}else{ \
 	__pu_val = x;						\
 	switch (sizeof(*(ptr))) {				\
 	case 1:							\
@@ -259,8 +265,8 @@ extern void __put_user_8(void);
 	default:						\
 		__put_user_x(X, __pu_val, ptr, __ret_pu);	\
 		break;						\
-	}							\
-	__builtin_expect(__ret_pu, 0);				\
+	}	}							\
+	__builtin_expect(__ret_pu, 0);			\
 })
 
 #define __put_user_size(x, ptr, size, label)				\
