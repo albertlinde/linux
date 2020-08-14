@@ -66,7 +66,7 @@ static int groups_from_user(struct group_info *group_info,
 	for (i = 0; i < count; i++) {
 		gid_t gid;
 		kgid_t kgid;
-		if (get_user(gid, grouplist+i))
+		if (__get_user(gid, grouplist+i))
 			return -EFAULT;
 
 		kgid = make_kgid(user_ns, gid);

@@ -756,12 +756,12 @@ static int do_ip_setsockopt(struct sock *sk, int level,
 	case IP_CHECKSUM:
 	case IP_RECVFRAGSIZE:
 		if (optlen >= sizeof(int)) {
-			if (get_user(val, (int __user *) optval))
+			if (__get_user(val, (int __user *) optval))
 				return -EFAULT;
 		} else if (optlen >= sizeof(char)) {
 			unsigned char ucval;
 
-			if (get_user(ucval, (unsigned char __user *) optval))
+			if (__get_user(ucval, (unsigned char __user *) optval))
 				return -EFAULT;
 			val = (int) ucval;
 		}
@@ -1343,7 +1343,7 @@ int compat_ip_setsockopt(struct sock *sk, int level, int optname,
 		if (optlen < sizeof(struct compat_group_req))
 			return -EINVAL;
 
-		if (get_user(greq.gr_interface, &gr32->gr_interface) ||
+		if (__get_user(greq.gr_interface, &gr32->gr_interface) ||
 		    copy_from_user(&greq.gr_group, &gr32->gr_group,
 				sizeof(greq.gr_group)))
 			return -EFAULT;
@@ -1376,7 +1376,7 @@ int compat_ip_setsockopt(struct sock *sk, int level, int optname,
 		if (optlen != sizeof(struct compat_group_source_req))
 			return -EINVAL;
 
-		if (get_user(greqs.gsr_interface, &gsr32->gsr_interface) ||
+		if (__get_user(greqs.gsr_interface, &gsr32->gsr_interface) ||
 		    copy_from_user(&greqs.gsr_group, &gsr32->gsr_group,
 				sizeof(greqs.gsr_group)) ||
 		    copy_from_user(&greqs.gsr_source, &gsr32->gsr_source,
@@ -1483,7 +1483,7 @@ static int do_ip_getsockopt(struct sock *sk, int level, int optname,
 	if (ip_mroute_opt(optname))
 		return ip_mroute_getsockopt(sk, optname, optval, optlen);
 
-	if (get_user(len, optlen))
+	if (__get_user(len, optlen))
 		return -EFAULT;
 	if (len < 0)
 		return -EINVAL;
@@ -1743,7 +1743,7 @@ int ip_getsockopt(struct sock *sk, int level,
 			!ip_mroute_opt(optname)) {
 		int len;
 
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 
 		err = nf_getsockopt(sk, PF_INET, optname, optval, &len);
@@ -1773,7 +1773,7 @@ int compat_ip_getsockopt(struct sock *sk, int level, int optname,
 		if (level != SOL_IP)
 			return -EOPNOTSUPP;
 
-		if (get_user(ulen, optlen))
+		if (__get_user(ulen, optlen))
 			return -EFAULT;
 
 		if (ulen < size0)
@@ -1818,7 +1818,7 @@ int compat_ip_getsockopt(struct sock *sk, int level, int optname,
 			!ip_mroute_opt(optname)) {
 		int len;
 
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 
 		err = compat_nf_getsockopt(sk, PF_INET, optname, optval, &len);

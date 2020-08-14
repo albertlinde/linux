@@ -3095,7 +3095,7 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 	if (optlen < sizeof(int))
 		return -EINVAL;
 
-	if (get_user(val, (int __user *)optval))
+	if (__get_user(val, (int __user *)optval))
 		return -EFAULT;
 
 	lock_sock(sk);
@@ -3583,7 +3583,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 	struct net *net = sock_net(sk);
 	int val, len;
 
-	if (get_user(len, optlen))
+	if (__get_user(len, optlen))
 		return -EFAULT;
 
 	len = min_t(unsigned int, len, sizeof(int));
@@ -3632,7 +3632,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 	case TCP_INFO: {
 		struct tcp_info info;
 
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 
 		tcp_get_info(sk, &info);
@@ -3650,7 +3650,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		size_t sz = 0;
 		int attr;
 
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 
 		ca_ops = icsk->icsk_ca_ops;
@@ -3669,7 +3669,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		break;
 
 	case TCP_CONGESTION:
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 		len = min_t(unsigned int, len, TCP_CA_NAME_MAX);
 		if (put_user(len, optlen))
@@ -3679,7 +3679,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		return 0;
 
 	case TCP_ULP:
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 		len = min_t(unsigned int, len, TCP_ULP_NAME_MAX);
 		if (!icsk->icsk_ulp_ops) {
@@ -3698,7 +3698,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		struct tcp_fastopen_context *ctx;
 		unsigned int key_len = 0;
 
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 
 		rcu_read_lock();
@@ -3739,7 +3739,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 	case TCP_REPAIR_WINDOW: {
 		struct tcp_repair_window opt;
 
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 
 		if (len != sizeof(opt))
@@ -3800,7 +3800,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		val = tp->save_syn;
 		break;
 	case TCP_SAVED_SYN: {
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 
 		lock_sock(sk);
@@ -3837,7 +3837,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		struct tcp_zerocopy_receive zc;
 		int err;
 
-		if (get_user(len, optlen))
+		if (__get_user(len, optlen))
 			return -EFAULT;
 		if (len < offsetofend(struct tcp_zerocopy_receive, length))
 			return -EINVAL;

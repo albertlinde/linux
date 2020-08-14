@@ -83,7 +83,7 @@ static int cap_validate_magic(cap_user_header_t header, unsigned *tocopy)
 {
 	__u32 version;
 
-	if (get_user(version, &header->version))
+	if (__get_user(version, &header->version))
 		return -EFAULT;
 
 	switch (version) {
@@ -156,7 +156,7 @@ SYSCALL_DEFINE2(capget, cap_user_header_t, header, cap_user_data_t, dataptr)
 	if ((dataptr == NULL) || (ret != 0))
 		return ((dataptr == NULL) && (ret == -EINVAL)) ? 0 : ret;
 
-	if (get_user(pid, &header->pid))
+	if (__get_user(pid, &header->pid))
 		return -EFAULT;
 
 	if (pid < 0)
@@ -232,7 +232,7 @@ SYSCALL_DEFINE2(capset, cap_user_header_t, header, const cap_user_data_t, data)
 	if (ret != 0)
 		return ret;
 
-	if (get_user(pid, &header->pid))
+	if (__get_user(pid, &header->pid))
 		return -EFAULT;
 
 	/* may only affect current now */

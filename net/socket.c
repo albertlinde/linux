@@ -224,7 +224,7 @@ static int move_addr_to_user(struct sockaddr_storage *kaddr, int klen,
 	int len;
 
 	BUG_ON(klen > sizeof(struct sockaddr_storage));
-	err = get_user(len, ulen);
+	err = __get_user(len, ulen);
 	if (err)
 		return err;
 	if (len > klen)

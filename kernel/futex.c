@@ -3006,7 +3006,7 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
 		return -ENOSYS;
 
 retry:
-	if (get_user(uval, uaddr))
+	if (__get_user(uval, uaddr))
 		return -EFAULT;
 	/*
 	 * We release only a lock we actually own:
@@ -3487,7 +3487,7 @@ static int handle_futex_death(u32 __user *uaddr, struct task_struct *curr,
 		return -1;
 
 retry:
-	if (get_user(uval, uaddr))
+	if (__get_user(uval, uaddr))
 		return -1;
 
 	/*
@@ -3589,7 +3589,7 @@ static inline int fetch_robust_entry(struct robust_list __user **entry,
 {
 	unsigned long uentry;
 
-	if (get_user(uentry, (unsigned long __user *)head))
+	if (__get_user(uentry, (unsigned long __user *)head))
 		return -EFAULT;
 
 	*entry = (void __user *)(uentry & ~1UL);
@@ -3625,7 +3625,7 @@ static void exit_robust_list(struct task_struct *curr)
 	/*
 	 * Fetch the relative futex offset:
 	 */
-	if (get_user(futex_offset, &head->futex_offset))
+	if (__get_user(futex_offset, &head->futex_offset))
 		return;
 	/*
 	 * Fetch any possibly pending lock-add first, and handle it
@@ -3880,7 +3880,7 @@ static inline int
 compat_fetch_robust_entry(compat_uptr_t *uentry, struct robust_list __user **entry,
 		   compat_uptr_t __user *head, unsigned int *pi)
 {
-	if (get_user(*uentry, head))
+	if (__get_user(*uentry, head))
 		return -EFAULT;
 
 	*entry = compat_ptr((*uentry) & ~1);
@@ -3926,7 +3926,7 @@ static void compat_exit_robust_list(struct task_struct *curr)
 	/*
 	 * Fetch the relative futex offset:
 	 */
-	if (get_user(futex_offset, &head->futex_offset))
+	if (__get_user(futex_offset, &head->futex_offset))
 		return;
 	/*
 	 * Fetch any possibly pending lock-add first, and handle it
