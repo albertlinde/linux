@@ -1318,7 +1318,7 @@ int sock_getsockopt(struct socket *sock, int level, int optname,
 	int lv = sizeof(int);
 	int len;
 
-	if (get_user(len, optlen))
+	if (__get_user(len, optlen))
 		return -EFAULT;
 	if (len < 0)
 		return -EINVAL;
