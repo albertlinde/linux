@@ -177,7 +177,7 @@ extern int __get_user_bad(void);
 	register __inttype(*(ptr)) __val_gu asm("%"_ASM_DX);		\
 	__chk_user_ptr(ptr);						\
 	if (should_fail_usercopy(sizeof(*(ptr)))) {(x)=0; __ret_gu= -EFAULT;} else { \
-	/*instrument_read(ptr, sizeof(*(ptr)));	wont run kernel*/				\
+	instrument_read(ptr, sizeof(*(ptr)));/*	wont run syzkaller*/				\
 	might_fault();							\
 	asm volatile("call __get_user_%P4"				\
 		     : "=a" (__ret_gu), "=r" (__val_gu),		\
@@ -246,7 +246,7 @@ extern void __put_user_8(void);
 	__typeof__(*(ptr)) __pu_val;				\
 	__chk_user_ptr(ptr);					\
 	might_fault();						\
-	/*instrument_write(ptr, sizeof(*(ptr))); Wont run kernel.*/						\
+	/*instrument_write(ptr, sizeof(*(ptr)));  Wont run kernel.*/						\
 	if (should_fail_usercopy(sizeof(*(ptr)))) {__ret_pu= -EFAULT;}else{ \
 	__pu_val = x;						\
 	switch (sizeof(*(ptr))) {				\
