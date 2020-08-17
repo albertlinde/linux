@@ -83,7 +83,7 @@ static int cap_validate_magic(cap_user_header_t header, unsigned *tocopy)
 {
 	__u32 version;
 
-	if (get_user(version, &header->version))
+	if (__get_user(version, &header->version))
 		return -EFAULT;
 
 	switch (version) {
