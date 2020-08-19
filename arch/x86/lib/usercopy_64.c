@@ -7,6 +7,7 @@
  * Copyright 2002 Andi Kleen <ak@suse.de>
  */
 #include <linux/export.h>
+#include <linux/fail-usercopy.h>
 #include <linux/uaccess.h>
 #include <linux/highmem.h>
 
@@ -50,8 +51,14 @@ EXPORT_SYMBOL(__clear_user);
 
 unsigned long clear_user(void __user *to, unsigned long n)
 {
+	long not_copied = should_fail_usercopy(n);
+
+	if (not_copied < 0)
+		not_copied = n;
+
 	if (access_ok(to, n))
-		return __clear_user(to, n);
+		return not_copied + __clear_user(to, n - not_copied);
+
 	return n;
 }
 EXPORT_SYMBOL(clear_user);
